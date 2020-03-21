@@ -14,7 +14,7 @@ bool Glue::Run() {
 		return false;
 	}
 
-	auto & positions = triMesh->GetPositions();
+	auto& positions = triMesh->GetPositions();
 	vector<unsigned> indice;
 	vector<pointf3> uniquePos;
 	map<pointf3, unsigned> pos2idx;

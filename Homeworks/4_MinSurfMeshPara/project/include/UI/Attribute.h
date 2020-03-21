@@ -16,6 +16,16 @@ namespace Ubpa {
 
 	class Grid;
 
+	enum WeightType {
+		kEqual,
+		kCotangent,
+	};
+
+	enum BoundShape {
+		kCircle,
+		kSquare,
+	};
+
 	class Attribute final {
 	protected:
 		Attribute();
@@ -30,6 +40,8 @@ namespace Ubpa {
 		void Init(QToolBox* tbox, RawAPI_OGLW* pOGLW);
 		void SetSObj(Ptr<SObj> sobj);
 		const Ptr<SObj> GetCurSObj() const { return curSObj.lock(); }
+		void SetWeightType(WeightType weight_type) { weight_type_ = weight_type; }
+		void SetBoundShape(BoundShape bound_shape) { bound_shape_ = bound_shape; }
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T>>>
 		void SetCurCmpt() {
 			auto target = componentType2item.find(typeid(T));
@@ -56,5 +68,8 @@ namespace Ubpa {
 		WPtr<SObj> curSObj;
 
 		RawAPI_OGLW* pOGLW;
+
+		WeightType weight_type_ = kEqual;
+		BoundShape bound_shape_ = kCircle;
 	};
 }

@@ -163,7 +163,6 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<CmptTransform> transform) {
 	grid->AddEditVal({ "x","y","z" }, transform->GetPosition().cast_to<Ubpa::valf3>(), Ubpa::valf3(0.1f), [=](const Ubpa::valf3 & val) {
 		transform->SetPosition(val.cast_to<Ubpa::pointf3>());
 	});
-	 
 	grid->AddText("- Rotation");
 	auto e = transform->GetRotationEuler().cast_to<Ubpa::vecf3>() / Ubpa::PI<float> * 180;
 	grid->AddEditVal({"x","y","z"}, e.cast_to<Ubpa::valf3>(), Ubpa::valf3(-90, -180, -180), Ubpa::valf3(90, 180, 180), Ubpa::vali3(180, 360, 360), [=](const Ubpa::valf3 & val) {
@@ -338,17 +337,18 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<TriMesh> mesh) {
 		pOGLW->DirtyVAO(mesh);
 	});
 
-	grid->AddButton("Minimize Surface", [mesh, pOGLW = attr->pOGLW]() {
-		auto minSurf = MinSurf::New(mesh);
+	grid->AddButton("Minimize Surface", [=]() {
+		auto minSurf = MinSurf::New(mesh, attr->weight_type_);
 		minSurf->Run();
-		pOGLW->DirtyVAO(mesh);
+		attr->pOGLW->DirtyVAO(mesh);
 	});
 
-	grid->AddButton("Paramaterize", [mesh, pOGLW = attr->pOGLW]() {
-		auto paramaterize = Paramaterize::New(mesh);
+
+	grid->AddButton("Paramaterize", [=]() {
+		auto paramaterize = Paramaterize::New(mesh, attr->weight_type_, attr->bound_shape_);
 		if (paramaterize->Run())
 			printf("Paramaterize done\n");
-		pOGLW->DirtyVAO(mesh);
+		attr->pOGLW->DirtyVAO(mesh);
 	});
 
 	grid->AddButton("Isotropic Remeshing", [mesh, pOGLW = attr->pOGLW]() {
@@ -361,6 +361,36 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<TriMesh> mesh) {
 			printf("[Isotropic Remeshing] fail\n");
 		pOGLW->DirtyVAO(mesh);
 	});
+
+	vector<string> weight_items { "Equal", "Cotangent" };
+	vector<string> shape_items { "Circle", "Square" };
+
+
+	auto setWeightSlot = [=](const string& item) {
+		if (item == weight_items[0])
+		{
+			attr->SetWeightType(kEqual);
+		}
+		else if (item == weight_items[1])
+		{
+			attr->SetWeightType(kCotangent);
+		}
+	};
+
+	auto setShapeSlot = [=](const string& item) {
+		if (item == "Circle")
+		{
+			attr->SetBoundShape(kCircle);
+		}
+		else if (item == "Square")
+		{
+			attr->SetBoundShape(kSquare);
+		}
+	};
+
+	grid->AddComboBox("- Weight Type", weight_items, "Change Weight", setWeightSlot);
+	grid->AddComboBox("- Bound Shape", shape_items, "Change Shape", setShapeSlot);
+
 }
 
 void Attribute::ComponentVisitor::ImplVisit(Ptr<Capsule> capsule) {

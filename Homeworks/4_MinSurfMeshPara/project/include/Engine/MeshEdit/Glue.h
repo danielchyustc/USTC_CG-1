@@ -2,6 +2,7 @@
 
 #include <Basic/HeapObj.h>
 
+
 namespace Ubpa {
 	class TriMesh;
 	class Glue : public HeapObj {
