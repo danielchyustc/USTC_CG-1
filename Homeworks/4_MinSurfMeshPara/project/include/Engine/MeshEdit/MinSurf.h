@@ -3,17 +3,20 @@
 #include <Basic/HeapObj.h>
 #include <UHEMesh/HEMesh.h>
 #include <UGM/UGM>
+#include <UI/Attribute.h>
 
 namespace Ubpa {
 	class TriMesh;
 	class Paramaterize;
+	class AXAP;
 
 	class MinSurf : public HeapObj {
 	public:
 		MinSurf(Ptr<TriMesh> triMesh);
+		MinSurf(Ptr<TriMesh> triMesh, WeightType weight_type);
 	public:
-		static const Ptr<MinSurf> New(Ptr<TriMesh> triMesh) {
-			return Ubpa::New<MinSurf>(triMesh);
+		static const Ptr<MinSurf> New(Ptr<TriMesh> triMesh, WeightType weight_type) {
+			return Ubpa::New<MinSurf>(triMesh, weight_type);
 		}
 	public:
 		// clear cache data
@@ -40,9 +43,13 @@ namespace Ubpa {
 		class E : public TEdge<V, E, P> { };
 		class P :public TPolygon<V, E, P> { };
 	private:
+		float CotangentWeight(V* vi, V* vj);
+	private:
 		friend class Paramaterize;
+		friend class AXAP;
 
 		Ptr<TriMesh> triMesh;
 		const Ptr<HEMesh<V>> heMesh; // vertice order is same with triMesh
+		WeightType weight_type_;
 	};
 }

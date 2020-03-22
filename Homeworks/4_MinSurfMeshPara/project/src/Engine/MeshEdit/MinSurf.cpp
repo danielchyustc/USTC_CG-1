@@ -10,7 +10,13 @@ using namespace std;
 using namespace Eigen;
 
 MinSurf::MinSurf(Ptr<TriMesh> triMesh)
-	: heMesh(make_shared<HEMesh<V>>())
+	: heMesh(make_shared<HEMesh<V>>()), weight_type_(kEqual)
+{
+	Init(triMesh);
+}
+
+MinSurf::MinSurf(Ptr<TriMesh> triMesh, WeightType weight_type)
+	: heMesh(make_shared<HEMesh<V>>()), weight_type_(weight_type)
 {
 	Init(triMesh);
 }
@@ -88,6 +94,70 @@ bool MinSurf::Run() {
 
 void MinSurf::Minimize() {
 	// TODO
-	cout << "WARNING::MinSurf::Minimize:" << endl
-		<< "\t" << "not implemented" << endl;
+	size_t nV = heMesh->Vertices().size();
+	SparseMatrix<float> A(nV, nV);
+	MatrixXf B(nV, 3);
+	// construct matrix A, B
+	for (size_t i = 0; i < nV; i++)
+	{
+		auto vi = heMesh->Vertices().at(i);
+		if (vi->IsBoundary())
+		{
+			A.insert(i, i) = 1;
+			B(i, 0) = vi->pos.at(0);
+			B(i, 1) = vi->pos.at(1);
+			B(i, 2) = vi->pos.at(2);
+		}
+		else
+		{
+			A.insert(i, i) = 0;
+			B.row(i) = Vector3f::Zero();
+			for (auto vj : vi->AdjVertices())
+			{
+				float weight;
+				switch (weight_type_)
+				{
+				case kEqual:
+					weight = 1;
+					break;
+				case kCotangent:
+					weight = CotangentWeight(vi, vj);
+					break;
+				default:
+					break;
+				}
+				A.coeffRef(i, i) += weight;
+				A.insert(i, heMesh->Index(vj)) = -weight;
+			}
+		}
+	}
+
+	// solve sparse linear equations
+	SparseLU<SparseMatrix<float>> solver;
+	solver.compute(A);
+	MatrixXf solution = solver.solve(B);
+	for (int i = 0; i < nV; i++)
+	{
+		auto vi = heMesh->Vertices().at(i);
+		vi->pos.at(0) = solution(i, 0);
+		vi->pos.at(1) = solution(i, 1);
+		vi->pos.at(2) = solution(i, 2);
+	}
+
+	cout << "Success::MinSurf::Minimize:" << endl
+		<< "\t" << "minimal surface successfully constructed" << endl;
+}
+
+float MinSurf::CotangentWeight(V* vi, V* vj)
+{
+	V* v_pre = vi->HalfEdgeTo(vj)->RotatePre()->End();
+	V* v_next = vi->HalfEdgeTo(vj)->RotateNext()->End();
+	vecf3 v_pi = vi->pos - v_pre->pos;
+	vecf3 v_pj = vj->pos - v_pre->pos;
+	vecf3 v_ni = vi->pos - v_next->pos;
+	vecf3 v_nj = vj->pos - v_next->pos;
+	float cot_alpha = v_pi.cos_theta(v_pj) / v_pi.sin_theta(v_pj);
+	float cot_beta = v_ni.cos_theta(v_nj) / v_ni.sin_theta(v_nj);
+	float weight = cot_alpha + cot_beta;
+	return weight > 0 ? weight : 0;
 }

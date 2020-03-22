@@ -5,6 +5,9 @@
 #include <Engine/MeshEdit/Glue.h>
 #include <Engine/MeshEdit/MinSurf.h>
 #include <Engine/MeshEdit/Paramaterize.h>
+#include <Engine/MeshEdit/AXAP.h>
+#include <Engine/MeshEdit/ASAP.h>
+#include <Engine/MeshEdit/ARAP.h>
 #include <Engine/MeshEdit/IsotropicRemeshing.h>
 #include <Engine/MeshEdit/ShortestPath.h>
 #include <Engine/MeshEdit/MST.h>
@@ -336,24 +339,91 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<TriMesh> mesh) {
 	grid->AddText("- Triangle", mesh->GetIndice().size() / 3);
 	grid->AddText("- Vertex", mesh->GetPositions().size());
 
+	vector<string> weight_items{ "Equal", "Cotangent" };
+	vector<string> shape_items{ "Circle", "Square" };
+	vector<string> type_items{ "ASAP", "ARAP" };
+
+
+	auto setWeightSlot = [=](const string& item) {
+		if (item == weight_items[0])
+		{
+			attr->SetWeightType(kEqual);
+		}
+		else if (item == weight_items[1])
+		{
+			attr->SetWeightType(kCotangent);
+		}
+	};
+
+	auto setShapeSlot = [=](const string& item) {
+		if (item == "Circle")
+		{
+			attr->SetBoundShape(kCircle);
+		}
+		else if (item == "Square")
+		{
+			attr->SetBoundShape(kSquare);
+		}
+	};
+
+	auto setTypeSlot = [=](const string& item) {
+		if (item == "ASAP")
+		{
+			attr->SetParaType(kASAP);
+		}
+		else if (item == "ARAP")
+		{
+			attr->SetParaType(kARAP);
+		}
+	};
+
+	grid->AddComboBox("- Weight Type", weight_items, "Change Weight", setWeightSlot);
+	grid->AddComboBox("- Bound Shape", shape_items, "Change Shape", setShapeSlot);
+	grid->AddComboBox("- Para Type", type_items, "Change Para Type", setTypeSlot);
+
 	grid->AddButton("Glue", [mesh, pOGLW = attr->pOGLW]() {
 		auto glue = Glue::New(mesh);
 		glue->Run();
 		pOGLW->DirtyVAO(mesh);
 	});
 
-	grid->AddButton("Minimize Surface", [mesh, pOGLW = attr->pOGLW]() {
-		auto minSurf = MinSurf::New(mesh);
+	grid->AddButton("Minimize Surface", [=]() {
+		auto minSurf = MinSurf::New(mesh, attr->weight_type_);
 		minSurf->Run();
-		pOGLW->DirtyVAO(mesh);
-	});
+		attr->pOGLW->DirtyVAO(mesh);
+		});
 
-	grid->AddButton("Paramaterize", [mesh, pOGLW = attr->pOGLW]() {
-		auto paramaterize = Paramaterize::New(mesh);
+	grid->AddButton("Paramaterize", [=]() {
+		auto paramaterize = Paramaterize::New(mesh, attr->weight_type_, attr->bound_shape_);
 		if (paramaterize->Run())
 			printf("Paramaterize done\n");
-		pOGLW->DirtyVAO(mesh);
-	});
+		attr->pOGLW->DirtyVAO(mesh);
+		});
+
+	grid->AddButton("AXAP", [=]() {
+		switch (attr->para_type_)
+		{
+		case kASAP:
+			attr->axap = ASAP::New(mesh);
+			break;
+		case kARAP:
+			attr->axap = ARAP::New(mesh);
+			break;
+		default:
+			break;
+		}
+		if (attr->axap->Run())
+			printf("AXAP done\n");
+		attr->pOGLW->DirtyVAO(mesh);
+		});
+
+	grid->AddButton("Iterate", [=]() {
+		if (attr->axap == nullptr)
+			printf("Not parametrized yet!\n");
+		if (attr->axap->Iterate())
+			printf("Iterate done\n");
+		attr->pOGLW->DirtyVAO(mesh);
+		});
 
 	grid->AddButton("Isotropic Remeshing", [mesh, pOGLW = attr->pOGLW]() {
 		printf("[Isotropic Remeshing] start\n");
@@ -375,6 +445,7 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<TriMesh> mesh) {
 		auto mst = MST::New(sobj);
 		mst->Run();
 		});
+
 }
 
 void Attribute::ComponentVisitor::ImplVisit(Ptr<Capsule> capsule) {
