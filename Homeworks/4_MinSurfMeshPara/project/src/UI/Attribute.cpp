@@ -193,6 +193,7 @@ void Attribute::ComponentVisitor::ImplVisit(Ptr<CmptSimulate> simulate) {
 		});
 	grid->AddButton("set x min fix", [simulate]() {
 		simulate->SetLeftFix();
+		printf("x min fixed\n");
 		});
 }
 

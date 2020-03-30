@@ -3,6 +3,10 @@
 #include <Basic/HeapObj.h>
 //#include <Engine/Primitive/MassSpring.h>
 #include <UGM/UGM>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+
+using namespace Eigen;
 
 namespace Ubpa {
 	class Simulate : public HeapObj {
@@ -52,20 +56,30 @@ namespace Ubpa {
 	private:
 		// kernel part of the algorithm
 		void SimulateOnce();
+		VectorXf FunctionG(VectorXf x);
+		void UpdateGradient(VectorXf x);
 
 	private:
-		float h = 0.03f;  //步长
-		float stiff;
-		std::vector<unsigned> fixed_id;  //fixed point id
+		float					h = 0.03f;  //步长
+		float					stiff = 1e5;	//spring stiffness
+		float					G = 9.8;	//acceleration of gravity
+		std::vector<unsigned>	fixed_id = std::vector<unsigned>();  //fixed point id
 
 
 		//mesh data
-		std::vector<unsigned> edgelist;
+		int						nV;				//number of vertices
+		int						nE;				//number of edges
+		int						mV;				//number of free vertices
+		std::vector<unsigned>	edgelist;
+		VectorXf				original_length;
 
 
 		//simulation data
-		std::vector<pointf3> positions;
-		std::vector<pointf3> velocity;
+		std::vector<pointf3>	positions;
+		std::vector<pointf3>	velocity;
+		VectorXf				y;
+		SparseMatrix<float>		K;
+		SparseMatrix<float>		gradient;
 		
 	};
 }
